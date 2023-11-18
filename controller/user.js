@@ -262,12 +262,52 @@ const getUserByToken = async(req,res,next)=>{
       message: error.message,
     })
   }
+}
 
-  //step 2 ekstrak payload menggunakan jwt.verify
+const editUserAccount = async(req,res,next)=>{
+  try {
+    //ekstak tokennya
+    const authorization = req.headers.authorization;
+    let token;
+    if(authorization !== null && authorization.startsWith("Bearer ")){
+      token = authorization.substring(7);
+    }else{
+      const error = new Error("You need to login");
+      error.statusCode(403);
+      throw error;
+    }
+    const decoded = jwt.verify(token, key);
 
-  //step 3 cari user berdasarkan payload.userId
+    //cari usernya
+    const currentUser = await User.findOne({
+      where:{
+        id: decoded.userId
+      }
+    })
+    if(!currentUser){
+      const error = new Error(`User with id ${id} not exist!`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    //proses datanya
+    if(req.file){
+      const file = req.file;
+      console.log(file);
+    }
+
+    res.status(200).json({
+      status: "TESTING"
+    })
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      status: "Error",
+      message: error.message
+    })
+  }
 }
 
 module.exports = {
-  getAllUser, getUserById, postUser, deleteUser, loginHandler, getUserByToken
+  getAllUser, getUserById, postUser, deleteUser, loginHandler, getUserByToken,
+  editUserAccount
 }
