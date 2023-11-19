@@ -4,6 +4,8 @@ const User = require('../model/User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const key = process.env.TOKEN_SECRET_KEY;
+const cloudinary = require('../util/cloudinary_config');
+const fs = require('fs');
 
 const getAllUser = async(req, res, next)=>{
   try {
@@ -264,6 +266,7 @@ const getUserByToken = async(req,res,next)=>{
   }
 }
 
+//edit user account (fullname, angkatan, nim, profilepicture/image)
 const editUserAccount = async(req,res,next)=>{
   try {
     //ekstak tokennya
@@ -289,15 +292,33 @@ const editUserAccount = async(req,res,next)=>{
       error.statusCode = 400;
       throw error;
     }
-
+    let imageUrl;
     //proses datanya
     if(req.file){
       const file = req.file;
-      console.log(file);
+      
+      const uploadOption = {
+        folder: 'Profile_Member/',
+        public_id: `user_${currentUser.id}`,
+        overwrite: true
+      }
+      
+      const uploadFile = await cloudinary.uploader.upload
+      (file.path, uploadOption);
+
+      //didapat image URL
+      imageUrl = uploadFile.secure_url;
+
+      //image url bakal diupdate kedalam database user bersangkutan
+      
+
+      //ngehapus file yang diupload didalam dir lokal
+      fs.unlinkSync(file.path);
     }
 
     res.status(200).json({
-      status: "TESTING"
+      status: "TESTING",
+      imageUrl: imageUrl
     })
   } catch (error) {
     res.status(error.statusCode || 500).json({

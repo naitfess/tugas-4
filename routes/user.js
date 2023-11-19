@@ -26,6 +26,6 @@ router.post("/users/login", loginHandler);
 router.delete("/users/:userId", deleteUser);
 
 //PUT /users/edit-account
-router.put("/users/edit-account", upload.single('image'), editUserAccount)
+router.put("/users/user-account", upload.single('image'), editUserAccount)
 
 module.exports = router;
