@@ -1,11 +1,16 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const upload = require('../middleware/upload_file');
+const upload = require("../middleware/upload_file");
 
-const { 
-  getAllUser, getUserById, postUser, loginHandler, 
-  deleteUser, getUserByToken, editUserAccount,
-} = require('../controller/user');
+const {
+  getAllUser,
+  getUserById,
+  postUser,
+  loginHandler,
+  deleteUser,
+  getUserByToken,
+  editUserAccount,
+} = require("../controller/user");
 
 //GET ALL USER (ENDPOINT 1)
 router.get("/users/fetch-all", getAllUser);
@@ -25,7 +30,7 @@ router.post("/users/login", loginHandler);
 //DELETE /users/:userId
 router.delete("/users/:userId", deleteUser);
 
-//PUT /users/edit-account
-router.put("/users/user-account", upload.single('image'), editUserAccount)
+//PUT /users/user-account
+router.put("/users/user-account", upload.single("image"), editUserAccount);
 
 module.exports = router;

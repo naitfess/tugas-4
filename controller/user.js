@@ -1,65 +1,70 @@
-require('dotenv').config();
-const Division = require('../model/Division');
-const User = require('../model/User');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+require("dotenv").config();
+const Division = require("../model/Division");
+const User = require("../model/User");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const key = process.env.TOKEN_SECRET_KEY;
-const cloudinary = require('../util/cloudinary_config');
-const fs = require('fs');
+const cloudinary = require("../util/cloudinary_config");
+const fs = require("fs");
 
-const getAllUser = async(req, res, next)=>{
+const getAllUser = async (req, res, next) => {
   try {
     //TUGAS NOMOR 1
     const users = await User.findAll({
       //query = select id, fullname, nim, angkatan, profilePicture, divisionId from users
-      attributes: ['id', 'fullName', 'nim', 'angkatan', 'profilePicture', 'divisionId'],
+      attributes: [
+        "id",
+        "fullName",
+        "nim",
+        "angkatan",
+        "profilePicture",
+        "divisionId",
+      ],
       //query = model user di inner joinkan dengan model division
       include: {
         model: Division,
         //model division yang dioutputkan hanya kolom name
-        attributes: ['name']
-      }
+        attributes: ["name"],
+      },
     });
 
     res.status(200).json({
       status: "Success",
       message: "Successfully fetch all user data",
-      users: users
-    })
+      users: users,
+    });
   } catch (error) {
     console.log(error.message);
   }
-}
+};
 
-const getUserById = (req,res,next)=>{
+const getUserById = (req, res, next) => {
   try {
     //TUGAS NOMOR 2 cari user berdasarkan userId
-    const {userId} = req.params
+    const { userId } = req.params;
   } catch (error) {
     console.log(error.message);
   }
-}
+};
 
 //handler register
-const postUser = async(req,res,next)=>{
+const postUser = async (req, res, next) => {
   try {
-    const {
-      fullName, nim, angkatan, email, password, division
-    } = req.body;
+    const { fullName, nim, angkatan, email, password, division } = req.body;
 
-    //hashed password user    
+    //hashed password user
     const hashedPassword = await bcrypt.hash(password, 5);
 
     //cari divisi id
     //pakai await untuk menghindari penulisan then
     const user_division = await Division.findOne({
-      where:{
-        name: division
-      }
+      where: {
+        name: division,
+      },
     });
 
     //SELECT * FROM DIVISION WHERE name = division
-    if(user_division == undefined){
+    if (user_division == undefined) {
       const error = new Error(`division ${division} is not existed!`);
       error.statusCode = 400;
       throw error;
@@ -71,128 +76,134 @@ const postUser = async(req,res,next)=>{
       fullName: fullName,
       //jika nama field == data maka bisa diringkas
       email,
-      password : hashedPassword,
+      password: hashedPassword,
       angkatan,
       nim,
       divisionId: user_division.id,
-      role: "MEMBER"
+      role: "MEMBER",
     });
 
-    const token = jwt.sign({
-      userId: currentUser.id,
-      role: currentUser.role
-    }, key, {
-      algorithm: "HS256",
-      expiresIn: "1h"
-    })
+    const token = jwt.sign(
+      {
+        userId: currentUser.id,
+        role: currentUser.role,
+      },
+      key,
+      {
+        algorithm: "HS256",
+        expiresIn: "1h",
+      }
+    );
 
     //send response
     res.status(201).json({
       status: "success",
       message: "Register Successfull!",
-      token
-    })
-
+      token,
+    });
   } catch (error) {
     //jika status code belum terdefined maka status = 500;
     res.status(error.statusCode || 500).json({
       status: "Error",
-      message: error.message
-    })
+      message: error.message,
+    });
   }
 };
 
-const loginHandler = async (req,res,next)=>{
+const loginHandler = async (req, res, next) => {
   try {
     // ambil data dari req body
     console.log("test");
-    const { email, password} = req.body;
-    console.log(email, password)
+    const { email, password } = req.body;
+    console.log(email, password);
     const currentUser = await User.findOne({
-      where:{
+      where: {
         //namaKolom: data_request_body
-        email: email
-      }
+        email: email,
+      },
     });
     //apabila user tidak ditemukan
-    if (currentUser == undefined){
+    if (currentUser == undefined) {
       const error = new Error("wrong email or password");
       error.statusCode = 400;
       throw error;
     }
-    const checkPassword = await bcrypt.compare(password, currentUser.password); 
+    const checkPassword = await bcrypt.compare(password, currentUser.password);
 
     //apabila password salah / tidak matched
-    if (checkPassword === false){
+    if (checkPassword === false) {
       const error = new Error("wrong email or password");
       error.statusCode = 400;
       throw error;
     }
 
-    const token = jwt.sign({
-      userId: currentUser.id,
-      role: currentUser.role
-    }, key,{
-      algorithm: "HS256",
-      expiresIn: "1h"
-    })
+    const token = jwt.sign(
+      {
+        userId: currentUser.id,
+        role: currentUser.role,
+      },
+      key,
+      {
+        algorithm: "HS256",
+        expiresIn: "1h",
+      }
+    );
 
     res.status(200).json({
       status: "Success",
       message: "Login Successfull!",
-      token
-    })
-
+      token,
+    });
   } catch (error) {
     res.status(error.statusCode || 500).json({
       status: "errorr",
-      message: error.message
-    })
+      message: error.message,
+    });
   }
-}
+};
 
-const deleteUser = async(req,res,next)=>{
+const deleteUser = async (req, res, next) => {
   //hanya admin yang bisa ngedelete
   try {
     //step 1 mengambil token
     //mengambil header
     const header = req.headers;
-    
+
     //mengambil header authnya
     const authorization = header.authorization;
     console.log(authorization); //Bearer <token>
     let token;
 
     //console.log(authorization); //Bearer token...
-    if(authorization !== undefined && authorization.startsWith("Bearer ")){
+    if (authorization !== undefined && authorization.startsWith("Bearer ")) {
       //mengilangkan string "Bearer "
-      token = authorization.substring(7); 
+      token = authorization.substring(7);
       //token akan bernilai token
-    }else{
+    } else {
       const error = new Error("You need to login");
       error.statusCode = 403;
       throw error;
     }
     //ekstrak payloadnya agar bisa mendapatkan userId dan role
     const decoded = jwt.verify(token, key);
-    
+
     //decoded mempunyai 2 property yaitu userId dan role
-    if(decoded.role !== "ADMIN"){
+    if (decoded.role !== "ADMIN") {
       const error = new Error("You don't have access!!!");
       error.statusCode = 403; //FORBIDDEN
       throw error;
     }
 
     //menjalankan operasi hapus
-    const {userId} = req.params;
-    
-    const targetedUser = await User.destroy({
-      where:{
-        id: userId
-      }
-    })
+    const { userId } = req.params;
 
-    if(targetedUser === undefined){
+    const targetedUser = await User.destroy({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!targetedUser) {
       const error = new Error(`User with id ${userId} is not existed`);
       error.statusCode = 400;
       throw error;
@@ -200,46 +211,44 @@ const deleteUser = async(req,res,next)=>{
 
     res.status(200).json({
       status: "Success",
-      message: "Successfully delete user"
-    })
+      message: "Successfully delete user",
+    });
   } catch (error) {
     res.status(error.statusCode || 500).json({
       status: "Error",
-      message: error.message
-    })
+      message: error.message,
+    });
   }
-}
+};
 
 //TODO 1
-const getUserByToken = async(req,res,next)=>{
+const getUserByToken = async (req, res, next) => {
   //tugas lengkapi codingan
   //hanya user yang telah login bisa mengambil data dirinya dengan mengirimkan token
   //step 1 ambil token
   try {
     const authorization = req.headers.authorization;
     let token;
-    if(authorization !== null & authorization.startsWith("Bearer ")){
-      token = authorization.substring(7); 
-    }else{  
+    if ((authorization !== null) & authorization.startsWith("Bearer ")) {
+      token = authorization.substring(7);
+    } else {
       const error = new Error("You need to login");
       error.statusCode = 400;
       throw error;
     }
 
     const decoded = jwt.verify(token, key);
-    
-    //decoded akan punya payload/data role & userId
-    const loggedUser = await User.findOne(
-      {
-        where: {id: decoded.userId},
-        include: {
-          model: Division,
-          attributes: ['name']
-        }
-      }
-    );
 
-    if(!loggedUser){
+    //decoded akan punya payload/data role & userId
+    const loggedUser = await User.findOne({
+      where: { id: decoded.userId },
+      include: {
+        model: Division,
+        attributes: ["name"],
+      },
+    });
+
+    if (!loggedUser) {
       const error = new Error(`User with id ${id} not exist!`);
       error.statusCode = 400;
       throw error;
@@ -248,33 +257,35 @@ const getUserByToken = async(req,res,next)=>{
     res.status(200).json({
       status: "Success",
       message: "Successfuly fetch user data",
-      user:{
+      user: {
         id: loggedUser.id,
         fullname: loggedUser.fullName,
         angkatan: loggedUser.angkatan,
-        divisi:{
-          name: loggedUser.division.name
-        }
-      }
-    })
-
+        divisi: {
+          name: loggedUser.division.name,
+        },
+      },
+    });
   } catch (error) {
     res.status(error.statusCode || 500).json({
       status: "Error",
       message: error.message,
-    })
+    });
   }
-}
+};
 
 //edit user account (fullname, angkatan, nim, profilepicture/image)
-const editUserAccount = async(req,res,next)=>{
+const editUserAccount = async (req, res, next) => {
   try {
+    //ambil req body
+    const { fullName, nim, angkatan, division } = req.body;
+
     //ekstak tokennya
     const authorization = req.headers.authorization;
     let token;
-    if(authorization !== null && authorization.startsWith("Bearer ")){
+    if (authorization !== null && authorization.startsWith("Bearer ")) {
       token = authorization.substring(7);
-    }else{
+    } else {
       const error = new Error("You need to login");
       error.statusCode(403);
       throw error;
@@ -283,52 +294,99 @@ const editUserAccount = async(req,res,next)=>{
 
     //cari usernya
     const currentUser = await User.findOne({
-      where:{
-        id: decoded.userId
-      }
-    })
-    if(!currentUser){
+      where: {
+        id: decoded.userId,
+      },
+    });
+    if (!currentUser) {
       const error = new Error(`User with id ${id} not exist!`);
       error.statusCode = 400;
       throw error;
     }
+
+    //cari id divisi
+    const user_division = await Division.findOne({
+      where: {
+        name: division,
+      },
+    });
+
+    if (!user_division) {
+      const error = new Error(`${division} is not existed`);
+      error.statusCode = 400;
+      throw error;
+    }
+
     let imageUrl;
     //proses datanya
-    if(req.file){
+    if (req.file) {
       const file = req.file;
-      
+
       const uploadOption = {
-        folder: 'Profile_Member/',
+        folder: "Profile_Member/",
         public_id: `user_${currentUser.id}`,
-        overwrite: true
-      }
-      
-      const uploadFile = await cloudinary.uploader.upload
-      (file.path, uploadOption);
+        overwrite: true,
+      };
+
+      const uploadFile = await cloudinary.uploader.upload(
+        file.path,
+        uploadOption
+      );
 
       //didapat image URL
       imageUrl = uploadFile.secure_url;
-
-      //image url bakal diupdate kedalam database user bersangkutan
-      
 
       //ngehapus file yang diupload didalam dir lokal
       fs.unlinkSync(file.path);
     }
 
+    //update data user
+    //image url bakal diupdate kedalam database user bersangkutan
+    await User.update(
+      {
+        fullName,
+        nim,
+        angkatan,
+        profilePicture: imageUrl,
+        divisionId: user_division.id,
+      },
+      {
+        where: {
+          id: currentUser.id,
+        },
+      }
+    );
+
+    const targetedUser = await User.findOne({
+      where: {
+        id: currentUser.id,
+      },
+      attributes: ["id", "fullname", "nim", "angkatan", "profilePicture"],
+      include: {
+        model: Division,
+        attributes: ["name"],
+      },
+    });
+
     res.status(200).json({
-      status: "TESTING",
-      imageUrl: imageUrl
-    })
+      status: "Success",
+      message: "Successfully edit user data",
+      user: targetedUser,
+    });
   } catch (error) {
     res.status(error.statusCode || 500).json({
       status: "Error",
-      message: error.message
-    })
+      message: error.message,
+    });
   }
-}
+};
 
 module.exports = {
-  getAllUser, getUserById, postUser, deleteUser, loginHandler, getUserByToken,
-  editUserAccount
-}
+  getAllUser,
+  getUserById,
+  postUser,
+  deleteUser,
+  loginHandler,
+  getUserByToken,
+  editUserAccount,
+};
